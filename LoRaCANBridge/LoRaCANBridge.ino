@@ -1,9 +1,11 @@
-#include "./definitions.hpp"
-#include "./messages.hpp"
-#include "./MKRLoRa.hpp"
-#include "./config.h"
-
 #include <CAN.h>
+
+#include "./IConnection.hpp"
+#include "./MKRLoRa.hpp"
+
+#include "./config.h"
+#include "./messages.hpp"
+
 
 IConnection *connection;
 uint8_t **messageData;

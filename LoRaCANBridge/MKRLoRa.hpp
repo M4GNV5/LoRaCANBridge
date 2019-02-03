@@ -1,7 +1,7 @@
 #pragma once
 
 #include <MKRWAN.h>
-#include "./definitions.hpp"
+#include "./IConnection.hpp"
 
 class MKRLoRa : public IConnection
 {
