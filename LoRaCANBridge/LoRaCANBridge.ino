@@ -1,68 +1,89 @@
 #include <CAN.h>
 
+#include "./config.h"
+#include "./log.hpp"
+
 #include "./IConnection.hpp"
 #include "./MKRLoRa.hpp"
 
-#include "./config.h"
 #include "./messages.hpp"
+
 
 
 IConnection *connection;
 uint8_t **messageData;
+Print *logger;
+
+inline uint8_t readBit(uint8_t *buff, uint32_t pos)
+{
+	uint8_t byte = pos / 8;
+	uint8_t mask = 1 << (7 - pos % 8);
+
+	return buff[byte] & mask;
+}
+
+inline bool writeBit(uint8_t *buff, uint32_t pos, uint8_t val)
+{
+	uint8_t byte = pos / 8;
+	uint8_t mask = 1 << (7 - pos % 8);
+
+	if(val)
+		val = mask;
+
+	uint8_t oldByte = buff[byte];
+	buff[byte] = (oldByte & ~mask) | val;
+
+	return buff[byte] != oldByte;
+}
 
 void handleFrame(uint32_t id, uint8_t *data)
 {
+	LOG(DEBUG, "Received CAN frame with id ", id);
+
+	Message *msg;
 	CANExtraction *extraction = nullptr;
-	for(size_t i = 0; i < EXTRACTION_COUNT; i++)
+	uint8_t outputPos;
+	for(size_t i = 0; i < MESSAGE_COUNT; i++)
 	{
-		if(extractions[i].can_id == id)
+		msg = &messages[i];
+		outputPos = 0;
+
+		for(size_t j = 0; j < msg->extractionCount; j++)
 		{
-			extraction = &extractions[i];
-			break;
-		}			
+			if(msg->extractions[j].id == id)
+			{
+				extraction = &msg->extractions[j];
+				break;
+			}
+
+			outputPos += msg->extractions[j].len;
+		}
 	}
 
 	if(extraction == nullptr)
 		return;
 
-	Message *msg = &messages[extraction->message];
-	uint8_t *output = msg->data;
-	size_t outputPos = extraction->bitPos / 8;
-	uint8_t outputMask = 0x80 >> (extraction->bitPos % 8);
+	LOG(DEBUG, "Found extraction for CAN frame");
 
-	for(uint8_t pos = 0; pos < 8 * 8; pos++)
+	uint8_t end = extraction->pos + extraction->len;
+	for(uint8_t pos = extraction->pos; pos < end; pos++)
 	{
-		uint8_t byte = pos / 8;
-		uint8_t mask = 1 << (7 - pos % 8);
+		uint8_t val = readBit(data, pos);
 
-		if(extraction->mask[byte] == 0)
-			continue;
-
-		if(extraction->mask[byte] & mask)
-		{
-			uint8_t value = (output[outputPos] & ~outputMask) | (data[byte] & mask);
-
-			if(value != output[outputPos])
-			{
-				output[outputPos] = value;
-				msg->changed = true;
-			}
-
-			outputMask >>= 1;
-			if(outputMask == 0)
-			{
-				outputMask = 0x80;
-
-				outputPos++;
-				if(outputPos >= msg->len)
-					return;
-			}
-		}
+		if(writeBit(msg->data, outputPos, val))
+			msg->changed = true;
+		outputPos++;
 	}
+
+	LOG(DEBUG, "Copied ", extraction->len, " bytes to the message buffer");
 }
 
 void setup()
 {
+	Serial.begin(9600);
+	logger = &Serial;
+
+	LOG(DEBUG, "Initializing messages");
 	for(size_t i = 0; i < MESSAGE_COUNT; i++)
 	{
 		messages[i].data = (uint8_t *)calloc(messages[i].len, 1);
@@ -70,8 +91,10 @@ void setup()
 		messages[i].changed = false;
 	}
 
+	LOG(DEBUG, "Initializing LoRa");
 	connection = new MKRLoRa(LORA_BAND, LORA_EUI, LORA_KEY);
-	
+
+	LOG(DEBUG, "Initializing CAN");
 	CAN.begin(CAN_SPEED);
 
 	//TODO CAN.filter()
@@ -108,18 +131,26 @@ void loop()
 		//TODO do something with `buff`
 	}
 
-	uint32_t now = millis();
-	for(size_t i = 0; i < MESSAGE_COUNT; i++)
+	if(connection->canSend())
 	{
-		uint32_t repetition = messages[i].repetition * 60 * 1000;
-		if(now >= messages[i].nextTransmit
-			&& (messages[i].nextTransmit >= repetition || now <= repetition))
+		uint32_t now = millis();
+
+		for(size_t i = 0; i < MESSAGE_COUNT; i++)
 		{
-			connection->send(messages[i].data, messages[i].len);
-			messages[i].nextTransmit = now + repetition;
-			messages[i].changed = false;
+			if(!messages[i].changed)
+				continue;
+
+			uint32_t repetition = messages[i].repetition * 60 * 1000;
+			if(now >= messages[i].nextTransmit
+				&& (messages[i].nextTransmit >= repetition || now <= repetition))
+			{
+				LOG(DEBUG, "Transmitting message ", i);
+				connection->send(messages[i].data, messages[i].len);
+				messages[i].nextTransmit = now + repetition;
+				messages[i].changed = false;
+			}
 		}
 	}
 
-	delay(10);
+	delay(1);
 }

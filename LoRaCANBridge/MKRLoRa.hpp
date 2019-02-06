@@ -2,6 +2,7 @@
 
 #include <MKRWAN.h>
 #include "./IConnection.hpp"
+#include "./log.hpp"
 
 class MKRLoRa : public IConnection
 {
@@ -12,7 +13,11 @@ public:
 	MKRLoRa(_lora_band band, const char *eui, const char *key)
 	{
 		modem.begin(band);
-		modem.joinOTAA(eui, key);
+
+		if(modem.joinOTAA(eui, key))
+			LOG(INFO, "Successfully connected to LoRa network");
+		else
+			LOG(ERROR, "Error connecting to LoRa Network!");
 	}
 
 	size_t maxLength()
@@ -29,6 +34,11 @@ public:
 	size_t receive(uint8_t *data, size_t maxLen)
 	{
 		return modem.read(data, maxLen);
+	}
+
+	bool canSend()
+	{
+		return modem.connected();
 	}
 
 	void send(uint8_t *data, size_t len)

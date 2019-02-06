@@ -11,5 +11,6 @@ public:
 	virtual bool available();
 	virtual size_t receive(uint8_t *data, size_t maxLen);
 
+	virtual bool canSend();
 	virtual void send(uint8_t *data, size_t len);
 };
