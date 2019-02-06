@@ -15,7 +15,7 @@ public:
 		modem.begin(band);
 
 		if(modem.joinOTAA(eui, key))
-			LOG(INFO, "Successfully connected to LoRa network");
+			LOG(DEBUG, "Successfully connected to LoRa network");
 		else
 			LOG(ERROR, "Error connecting to LoRa Network!");
 	}

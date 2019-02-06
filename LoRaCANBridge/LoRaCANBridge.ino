@@ -36,13 +36,28 @@ inline bool writeBit(uint8_t *buff, uint32_t pos, uint8_t val)
 	return buff[byte] != oldByte;
 }
 
+void handleExtraction(uint8_t *data, Message *msg,
+	CANExtraction *extraction, uint32_t outputPos)
+{
+	uint32_t end = extraction->pos + extraction->len;
+
+	for(uint32_t pos = extraction->pos; pos < end; pos++)
+	{
+		uint8_t val = readBit(data, pos);
+
+		if(writeBit(msg->data, outputPos, val))
+			msg->changed = true;
+		outputPos++;
+	}
+
+	LOG(DEBUG, "Copied ", extraction->len, " bits to the message buffer");
+}
+
 void handleFrame(uint32_t id, uint8_t *data)
 {
-	LOG(DEBUG, "Received CAN frame with id ", id);
-
 	Message *msg;
-	CANExtraction *extraction = nullptr;
-	uint8_t outputPos;
+	uint32_t outputPos;
+
 	for(size_t i = 0; i < MESSAGE_COUNT; i++)
 	{
 		msg = &messages[i];
@@ -52,34 +67,19 @@ void handleFrame(uint32_t id, uint8_t *data)
 		{
 			if(msg->extractions[j].id == id)
 			{
-				extraction = &msg->extractions[j];
-				break;
+				LOG(DEBUG, "Found extraction for CAN frame");
+				handleExtraction(data, msg, &msg->extractions[j], outputPos);
 			}
 
 			outputPos += msg->extractions[j].len;
 		}
 	}
-
-	if(extraction == nullptr)
-		return;
-
-	LOG(DEBUG, "Found extraction for CAN frame");
-
-	uint8_t end = extraction->pos + extraction->len;
-	for(uint8_t pos = extraction->pos; pos < end; pos++)
-	{
-		uint8_t val = readBit(data, pos);
-
-		if(writeBit(msg->data, outputPos, val))
-			msg->changed = true;
-		outputPos++;
-	}
-
-	LOG(DEBUG, "Copied ", extraction->len, " bytes to the message buffer");
 }
 
 void setup()
 {
+	delay(5000);
+
 	Serial.begin(9600);
 	logger = &Serial;
 
@@ -91,11 +91,14 @@ void setup()
 		messages[i].changed = false;
 	}
 
-	LOG(DEBUG, "Initializing LoRa");
+	LOG(INFO, "Initializing LoRa");
 	connection = new MKRLoRa(LORA_BAND, LORA_EUI, LORA_KEY);
 
-	LOG(DEBUG, "Initializing CAN");
-	CAN.begin(CAN_SPEED);
+	LOG(INFO, "Initializing CAN");
+	if(CAN.begin(CAN_SPEED))
+		LOG(DEBUG, "Successfully initialized CAN");
+	else
+		LOG(ERROR, "Failed to initialize CAN");
 
 	//TODO CAN.filter()
 }
@@ -107,6 +110,9 @@ void loop()
 		int len = CAN.parsePacket();
 		if(len == 0)
 			break;
+
+		LOG(DEBUG, "Received CAN frame with id ", CAN.packetId(), " of length ", len);
+
 		if(CAN.packetRtr())
 			continue;
 
