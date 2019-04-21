@@ -1,0 +1,30 @@
+{
+	"can-spec": "<path to kcd or dbc file>",
+
+	"messages": [
+		"SOC",
+		"odometer",
+		"*temperature*",
+		"connected to grid",
+		"vehicle online",
+		"charging",
+		"key turned"
+	],
+
+	"thethingsnetwork": {
+		"host": "eu.thethings.network",
+		"port": 1883,
+		"username": "<ttn username>",
+		"password": "<ttn password>"
+	},
+	"influxdb": {
+		"host": "<influx db host>",
+		"port": 8086,
+		"username": "root",
+		"password": "root",
+
+		"database": "twizy",
+		"measurement": "lorabridge",
+		"tags": {}
+	}
+}
