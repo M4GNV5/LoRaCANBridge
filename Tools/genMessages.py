@@ -1,42 +1,21 @@
-import argparse, fnmatch, re, cantools
+import json, fnmatch, re, cantools
 
 def matcher(x):
 	return re.compile(fnmatch.translate(x))
 
-parser = argparse.ArgumentParser(description="Generate LoRaCANBridge messages.h")
-parser.add_argument("--include", default=[], type=matcher, action="append",
-	help="Use multiple times to only include the signals provided")
-parser.add_argument("--exclude", default=[], type=matcher, action="append",
-	help="Use multiple times to include all signals except the ones provided")
-parser.add_argument("--repetition", type=int, default=5,
-	help="LoRa message interval in minutes")
-parser.add_argument("file", nargs=1,
-	help=".kcd or .dbc where to load the CAN messages from")
-args = parser.parse_args()
+with open("config.json") as fd:
+	config = json.load(fd)
 
-db = cantools.database.load_file(args.file[0])
+messageWhitelist = config["messages"]
+for i in range(0, len(messageWhitelist)):
+	messageWhitelist[i] = re.compile(fnmatch.translate(messageWhitelist[i]))
 
-def wildcardMatch(name, matcher):
-	for regex in matcher:
+def signalFilter(name):
+	for regex in messageWhitelist:
 		if regex.search(name) is not None:
 			return True
 
-	return False
-def acceptAny(name):
-	return True
-def acceptIncluded(name):
-	return wildcardMatch(name, args.include)
-def acceptNotExcluded(name):
-	return not wildcardMatch(name, args.include)
-
-signalFilter = acceptAny
-if len(args.include) != 0 and len(args.exclude) != 0:
-	print("Cannot specify both --include and --exclude")
-	exit(1)
-elif len(args.include) != 0:
-	signalFilter = acceptIncluded
-elif len(args.exclude) != 0:
-	signalFilter = acceptNotExcluded
+db = cantools.database.load_file(config["can-spec"])
 
 extractions = []
 bitLen = 0
@@ -59,7 +38,7 @@ if bitLen % 8 != 0:
 #TODO support more than one LoRa Message
 loraMessages = [
 	{
-		'repetition': args.repetition,
+		'repetition': config["repetition"],
 		'len': byteLen,
 		'extractions': extractions
 	},

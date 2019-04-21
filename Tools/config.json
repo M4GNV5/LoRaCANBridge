@@ -1,6 +1,7 @@
 {
 	"can-spec": "<path to kcd or dbc file>",
 
+	"repetition": 10,
 	"messages": [
 		"SOC",
 		"odometer",
