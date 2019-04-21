@@ -20,7 +20,8 @@ def writeBit(data, pos, val):
 		data[byte] = data[byte] & ~mask
 
 def copyBits(dst, dstPos, src, srcPos, count):
-	for dstIndex in range(pos, dstPos + count):
+	for i in range(0, count):
+		dstIndex = dstPos + i
 		srcIndex = srcPos + i
 
 		writeBit(dst, dstIndex, readBit(src, srcIndex))
@@ -43,12 +44,15 @@ def parseMessage(payload):
 				continue
 
 			dummy = bytearray(8)
-			copyBits(dummy, signal.start, payload, bitPos, signal.length)
+			signalStart = cantools.database.utils.start_bit(signal)
+			copyBits(dummy, signalStart, payload, bitPos, signal.length)
 
-			parsed = canDB.decode(dummy)
+			parsed = msg.decode(dummy)
 			result[name] = parsed[signal.name]
 
 			bitPos = bitPos + signal.length
+
+	return result
 
 
 
@@ -59,14 +63,15 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, msg):
 	try:
-		data = json.loads(msg.payload)
-	except Error as e:
+		data = json.loads(msg.payload.decode("utf8"))
+	except Exception as e:
 		print(e)
 		return
 
-	payload = base64.decodestring(data["payload_raw"])
+	payload = base64.decodestring(data["payload_raw"].encode("utf8"))
+	metadata = data["metadata"]
 	fields = parseMessage(payload)
-	fields["metadata"] = data["metadata"]
+	fields["metadata"] = metadata
 
 	body = [
 		{
@@ -84,7 +89,9 @@ def on_message(client, userdata, msg):
 	for key in influxConfig["tags"]:
 		body[0]["tags"][key] = influxConfig["tags"][key]
 
-	
+	client.write_points(body)
+
+
 
 with open("config.json") as fd:
 	config = json.load(fd)
