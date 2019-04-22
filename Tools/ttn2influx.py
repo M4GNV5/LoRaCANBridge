@@ -89,7 +89,10 @@ def on_message(client, userdata, msg):
 	for key in influxConfig["tags"]:
 		body[0]["tags"][key] = influxConfig["tags"][key]
 
-	client.write_points(body)
+	try:
+		db.write_points(body)
+	except Exception as e:
+		print(e)
 
 
 
@@ -104,6 +107,12 @@ messageWhitelist = config["messages"]
 for i in range(0, len(messageWhitelist)):
 	messageWhitelist[i] = re.compile(fnmatch.translate(messageWhitelist[i]))
 
+db = InfluxDBClient(
+	influxConfig["host"], influxConfig["port"],
+	influxConfig["username"], influxConfig["password"],
+	influxConfig["database"]
+)
+
 mqtt = MQTTClient()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
@@ -111,9 +120,3 @@ mqtt.on_message = on_message
 mqtt.username_pw_set(ttnConfig["username"], ttnConfig["password"])
 mqtt.connect(ttnConfig["host"], ttnConfig["port"], 60)
 mqtt.loop_forever()
-
-db = InfluxDBClient(
-	influxConfig["host"], influxConfig["port"],
-	influxConfig["username"], influxConfig["password"],
-	influxConfig["database"]
-)

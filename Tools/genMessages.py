@@ -26,7 +26,7 @@ for msg in db.messages:
 			extractions.append({
 				'name': name,
 				'frame_id': msg.frame_id,
-				'start': signal.start,
+				'start': cantools.database.utils.start_bit(signal),
 				'length': signal.length,
 			})
 			bitLen = bitLen + signal.length

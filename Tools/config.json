@@ -1,15 +1,17 @@
 {
 	"can-spec": "<path to kcd or dbc file>",
 
-	"repetition": 10,
+	"repetition": 1,
 	"messages": [
-		"SOC",
-		"odometer",
-		"*temperature*",
-		"connected to grid",
-		"vehicle online",
-		"charging",
-		"key turned"
+		"Battery Status/SOC",
+		"Driver Info/odometer",
+		"Driver Info/range",
+		"Cell Temperatures/*",
+		"Battery Voltage/*",
+		"12V Status/connected to grid",
+		"12V Status/vehicle online",
+		"12V Status/charging",
+		"12V Status/key turned"
 	],
 
 	"thethingsnetwork": {
