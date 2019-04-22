@@ -71,7 +71,7 @@ def on_message(client, userdata, msg):
 	payload = base64.decodestring(data["payload_raw"].encode("utf8"))
 	metadata = data["metadata"]
 	fields = parseMessage(payload)
-	fields["metadata"] = metadata
+	#fields["metadata"] = metadata
 
 	body = [
 		{
