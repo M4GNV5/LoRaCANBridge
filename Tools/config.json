@@ -1,14 +1,19 @@
 {
 	"can-spec": "<path to kcd or dbc file>",
 
-	"repetition": 1,
+	"repetition": 5,
 	"messages": {
 		"Battery Status/SOC": true,
+		"Battery Health/SOH": true,
 		"Driver Info/odometer": {
-			"invalid-values": [0]
+			"invalid-values": [
+				0
+			]
 		},
 		"Driver Info/range": {
-			"invalid-values": [0]
+			"invalid-values": [
+				0
+			]
 		},
 		"Cell Temperatures/*": {
 			"invalid-values": [

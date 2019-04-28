@@ -23,12 +23,22 @@ for msg in db.messages:
 	for signal in msg.signals:
 		name = msg.name + "/" + signal.name
 		if signalFilter(name):
-			extractions.append({
-				'name': name,
-				'frame_id': msg.frame_id,
-				'start': cantools.database.utils.start_bit(signal),
-				'length': signal.length,
-			})
+			start = cantools.database.utils.start_bit(signal)
+
+			if len(extractions) > 0 \
+				and extractions[-1]["frame_id"] == msg.frame_id \
+				and extractions[-1]["start"] + extractions[-1]["length"] == start:
+				previous = extractions[-1]
+				previous["name"] = previous["name"] + ", " + name
+				previous["length"] = previous["length"] + signal.length
+			else:
+				extractions.append({
+					'name': name,
+					'frame_id': msg.frame_id,
+					'start': cantools.database.utils.start_bit(signal),
+					'length': signal.length,
+				})
+
 			bitLen = bitLen + signal.length
 
 byteLen = bitLen // 8
