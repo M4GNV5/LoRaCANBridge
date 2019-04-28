@@ -34,13 +34,13 @@ def parseMessage(payload):
 		for signal in msg.signals:
 
 			name = msg.name + "/" + signal.name
-			whitelisted = False
-			for regex in messageWhitelist:
+			signalInfo = None
+			for regex, info in messageWhitelist:
 				if regex.search(name) is not None:
-					whitelisted = True
+					signalInfo = info
 					break
 
-			if not whitelisted:
+			if not signalInfo:
 				continue
 
 			dummy = bytearray(8)
@@ -48,7 +48,12 @@ def parseMessage(payload):
 			copyBits(dummy, signalStart, payload, bitPos, signal.length)
 
 			parsed = msg.decode(dummy)
-			result[name] = parsed[signal.name]
+			value = parsed[signal.name]
+
+			if type(signalInfo) != dict \
+				or "invalid-values" not in signalInfo \
+				or value not in signalInfo["invalid-values"]:
+				result[name] = value
 
 			bitPos = bitPos + signal.length
 
@@ -103,9 +108,11 @@ ttnConfig = config["thethingsnetwork"]
 influxConfig = config["influxdb"]
 canDB = cantools.database.load_file(config["can-spec"])
 
-messageWhitelist = config["messages"]
-for i in range(0, len(messageWhitelist)):
-	messageWhitelist[i] = re.compile(fnmatch.translate(messageWhitelist[i]))
+messageWhitelist = []
+for key in config["messages"]:
+	val = config["messages"][key]
+	entry = (re.compile(fnmatch.translate(key)), val)
+	messageWhitelist.append(entry)
 
 db = InfluxDBClient(
 	influxConfig["host"], influxConfig["port"],

@@ -6,9 +6,9 @@ def matcher(x):
 with open("config.json") as fd:
 	config = json.load(fd)
 
-messageWhitelist = config["messages"]
-for i in range(0, len(messageWhitelist)):
-	messageWhitelist[i] = re.compile(fnmatch.translate(messageWhitelist[i]))
+messageWhitelist = []
+for key in config["messages"]:
+	messageWhitelist.append(re.compile(fnmatch.translate(key)))
 
 def signalFilter(name):
 	for regex in messageWhitelist:
