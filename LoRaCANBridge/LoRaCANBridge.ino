@@ -1,16 +1,14 @@
 #include <CAN.h>
+#include <MKRWAN.h>
 
 #include "./config.h"
 #include "./log.hpp"
-
-#include "./IConnection.hpp"
-#include "./MKRLoRa.hpp"
 
 #include "./messages.hpp"
 
 
 
-IConnection *connection;
+LoRaModem modem;
 uint8_t **messageData;
 Print *logger;
 
@@ -92,7 +90,13 @@ void setup()
 	}
 
 	LOG(INFO, "Initializing LoRa");
-	connection = new MKRLoRa(LORA_BAND, LORA_EUI, LORA_KEY);
+	modem.begin(LORA_BAND);
+	LOG(INFO, "LoRa Device EUI: ", modem.deviceEUI());
+
+	if(modem.joinOTAA(LORA_EUI, LORA_KEY))
+		LOG(DEBUG, "Successfully connected to LoRa network");
+	else
+		LOG(ERROR, "Error connecting to LoRa Network!");
 
 	LOG(INFO, "Initializing CAN");
 	if(CAN.begin(CAN_SPEED))
@@ -128,16 +132,15 @@ void loop()
 		handleFrame(CAN.packetId(), data);
 	}
 
-	if(connection->available())
+	if(modem.available())
 	{
-		size_t maxLen = connection->maxLength();
-		uint8_t buff[maxLen];
-		connection->receive(buff, maxLen);
+		uint8_t buff[64];
+		modem.read(buff, 64);
 
 		//TODO do something with `buff`
 	}
 
-	if(connection->canSend())
+	if(modem.connected())
 	{
 		uint32_t now = millis();
 
@@ -151,7 +154,10 @@ void loop()
 				&& (messages[i].nextTransmit >= repetition || now <= repetition))
 			{
 				LOG(DEBUG, "Transmitting message ", i);
-				connection->send(messages[i].data, messages[i].len);
+				modem.beginPacket();
+				modem.write(messages[i].data, messages[i].len);
+				modem.endPacket(true);
+
 				messages[i].nextTransmit = now + repetition;
 				messages[i].changed = false;
 			}
