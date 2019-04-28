@@ -11,6 +11,7 @@
 LoRaModem modem;
 uint8_t **messageData;
 Print *logger;
+uint32_t lastCanPacket;
 
 inline uint8_t readBit(uint8_t *buff, uint32_t pos)
 {
@@ -105,6 +106,8 @@ void setup()
 		LOG(ERROR, "Failed to initialize CAN");
 
 	//TODO CAN.filter()
+
+	lastCanPacket = millis();
 }
 
 void loop()
@@ -116,6 +119,8 @@ void loop()
 			break;
 
 		LOG(DEBUG, "Received CAN frame with id ", CAN.packetId(), " of length ", len);
+
+		lastCanPacket = millis();
 
 		if(CAN.packetRtr())
 			continue;
@@ -164,5 +169,10 @@ void loop()
 		}
 	}
 
-	delay(1);
+	// when we did not receive a new CAN frame for a longer period increase the delay
+	// we could deepsleep here and be woken up by the RTC but the CAN & LoRa circuitry would run anyways.
+	if(lastCanPacket - millis() > SLEEP_AFTER)
+		delay(10 * 1000);
+	else
+		delay(1);
 }
