@@ -171,7 +171,7 @@ void loop()
 
 	// when we did not receive a new CAN frame for a longer period increase the delay
 	// we could deepsleep here and be woken up by the RTC but the CAN & LoRa circuitry would run anyways.
-	if(lastCanPacket - millis() > SLEEP_AFTER)
+	if(millis() - lastCanPacket > SLEEP_AFTER)
 		delay(10 * 1000);
 	else
 		delay(1);
