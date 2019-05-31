@@ -18,11 +18,14 @@ def signalFilter(name):
 db = cantools.database.load_file(config["can-spec"])
 
 extractions = []
+ids = []
 bitLen = 0
 for msg in db.messages:
 	for signal in msg.signals:
 		name = msg.name + "/" + signal.name
 		if signalFilter(name):
+			ids.append(msg.frame_id)
+
 			start = cantools.database.utils.start_bit(signal)
 
 			if len(extractions) > 0 \
@@ -79,5 +82,9 @@ for i, message in enumerate(loraMessages):
 		"\t},\n"
 
 messageCode = messageCode + "};\n"
+
+ids = ",\n\t".join(["0x{:x}".format(x) for x in set(ids)])
+print("int canIds[] = {\n\t" + ids + "\n};\n")
+
 print(extractionsCode)
 print(messageCode)

@@ -25,63 +25,72 @@ typedef struct
 	uint8_t *data;
 } Message;
 
+int canIds[] = {
+	0x597,
+	0x599,
+	0x424,
+	0x155,
+	0x554
+};
+
 CANExtraction message0Extractions[] = {
 	{
-		//0x554 bytes 0-8: Cell tempertures
-		.id = 0x554,
-		.pos = 0,
-		.len = 64,
-	},
-	{
-		//0x599 bytes 0-4: Odometer
-		.id = 0x599,
-		.pos = 0,
-		.len = 32,
-	},
-	{
-		//0x155 byte 0: Charging speed in 300W
-		.id = 0x155,
-		.pos = 0,
-		.len = 8,
-	},
-	{
-		//0x155 bytes 4, 5: Battery in 0.0025%
+		// Battery Status/SOC,
 		.id = 0x155,
 		.pos = 32,
 		.len = 16,
 	},
 	{
-		//0x424 bytes 5: Battery SOH in %
+		// Battery Health/SOH,
 		.id = 0x424,
 		.pos = 40,
 		.len = 8,
 	},
 	{
-		//0x597 bit 0: connected to grid
+		// Cell Temperatures/cell temperature 0, Cell Temperatures/cell temperature 1, Cell Temperatures/cell temperature 2, Cell Temperatures/cell temperature 3, Cell Temperatures/cell temperature 4, Cell Temperatures/cell temperature 5, Cell Temperatures/cell temperature 6,
+		.id = 0x554,
+		.pos = 0,
+		.len = 56,
+	},
+	{
+		// 12V Status/connected to grid,
 		.id = 0x597,
 		.pos = 2,
 		.len = 1,
 	},
 	{
-		//0x597 bit 9, 10, 11: offline, charging, key turned
+		// 12V Status/vehicle online, 12V Status/charging, 12V Status/key turned,
 		.id = 0x597,
 		.pos = 9,
 		.len = 3,
 	},
 	{
-		//0x597 bit 24, 25: DC/DC status
+		// 12V Status/DC/DC status,
 		.id = 0x597,
 		.pos = 24,
 		.len = 2,
+	},
+	{
+		// Driver Info/odometer,
+		.id = 0x599,
+		.pos = 0,
+		.len = 32,
+	},
+	{
+		// Driver Info/range,
+		.id = 0x599,
+		.pos = 40,
+		.len = 8,
 	},
 };
 
 Message messages[] = {
 	{
-		.repetition = 1,
-		.len = 17,
+		.repetition = 5,
+		.len = 16,
 		.extractions = message0Extractions,
-		.extractionCount = sizeof(message0Extractions) / sizeof(CANExtraction),
+		.extractionCount = sizeof(message0Extractions) / sizeof(CANExtraction)
 	},
 };
+
 #define MESSAGE_COUNT (sizeof(messages) / sizeof(Message))

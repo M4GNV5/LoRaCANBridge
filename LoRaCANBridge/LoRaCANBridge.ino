@@ -1,5 +1,12 @@
-#include <CAN.h>
 #include <MKRWAN.h>
+
+//XXX: for now we include these from a submodule until the multiFilter PR is merged
+// see https://github.com/sandeepmistry/arduino-CAN/pull/20
+#include "arduino-CAN/src/CAN.h"
+#include "arduino-CAN/src/CANController.h"
+#include "arduino-CAN/src/CANController.cpp"
+#include "arduino-CAN/src/MCP2515.h"
+#include "arduino-CAN/src/MCP2515.cpp"
 
 #include "./config.h"
 #include "./log.hpp"
@@ -105,7 +112,7 @@ void setup()
 	else
 		LOG(ERROR, "Failed to initialize CAN");
 
-	//TODO CAN.filter()
+	CAN.multiFilter(canIds, sizeof(canIds) / sizeof(int));
 
 	lastCanPacket = millis();
 }

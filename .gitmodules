@@ -1,0 +1,3 @@
+[submodule "LoRaCANBridge/arduino-CAN"]
+	path = LoRaCANBridge/arduino-CAN
+	url = git@github.com:M4GNV5/arduino-CAN.git
