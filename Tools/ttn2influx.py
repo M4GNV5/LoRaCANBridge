@@ -76,6 +76,20 @@ def on_message(client, userdata, msg):
 	payload = base64.decodestring(data["payload_raw"].encode("utf8"))
 	metadata = data["metadata"]
 	fields = parseMessage(payload)
+
+	gateway_lon = 0
+	gateway_lat = 0
+	gateway_count = 0
+	for gateway in metadata["gateways"]:
+		if "longitude" in gateway and "latitude" in gateway:
+			gateway_lon += gateway["longitude"]
+			gateway_lat += gateway["latitude"]
+			gateway_count += 1
+
+	if gateway_count != 0:
+		fields["longitude"] = gateway_lon / gateway_count
+		fields["latitude"] = gateway_lat / gateway_count
+
 	fields["metadata"] = json.dumps(metadata)
 
 	body = [
