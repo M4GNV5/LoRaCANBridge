@@ -1,4 +1,4 @@
-import re, fnmatch, base64, json, cantools
+import re, fnmatch, base64, json, cantools, requests
 from paho.mqtt.client import Client as MQTTClient
 from influxdb import InfluxDBClient
 
@@ -59,7 +59,37 @@ def parseMessage(payload):
 
 	return result
 
+knownGateways = {}
+def getGatewayPosition(gateway):
+	global knownGateways
 
+	if "latitude" in gateway and "longitude" in gateway:
+		return (gateway["latitude"], gateway["longitude"])
+
+	eui = gateway["gtw_id"]
+	if eui in knownGateways:
+		return knownGateways[eui]
+	else:
+		try:
+			response = requests.get("http://noc.thethingsnetwork.org:8085/api/v2/gateways/" + eui)
+			data = response.json()
+			gps = data["gps"]
+			location = data["location"]
+
+			if "latitude" in gps and "longitude" in gps:
+				pos = (gps["latitude"], gps["longitude"])
+			elif "latitude" in location and "longitude" in location:
+				pos = (location["latitude"], location["longitude"])
+			else:
+				pos = None
+		except Exception as e:
+			print(e)
+			pos = None
+
+		if pos is not None:
+			knownGateways[eui] = pos
+
+		return pos
 
 def on_connect(client, userdata, flags, rc):
 	print("Connected with result code " + str(rc))
@@ -81,9 +111,11 @@ def on_message(client, userdata, msg):
 	gateway_lat = 0
 	gateway_count = 0
 	for gateway in metadata["gateways"]:
-		if "longitude" in gateway and "latitude" in gateway:
-			gateway_lon += gateway["longitude"]
-			gateway_lat += gateway["latitude"]
+		pos = getGatewayPosition(gateway)
+		if pos is not None:
+			lat, lon = pos
+			gateway_lat += lat
+			gateway_lon += lon
 			gateway_count += 1
 
 	if gateway_count != 0:
