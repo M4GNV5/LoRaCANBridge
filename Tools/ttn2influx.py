@@ -1,4 +1,8 @@
-import re, fnmatch, base64, json, cantools, requests
+import re
+import fnmatch
+import base64
+import json
+import cantools
 from paho.mqtt.client import Client as MQTTClient
 from influxdb import InfluxDBClient
 
@@ -59,15 +63,15 @@ def parseMessage(payload):
 
 	return result
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(_1, _2, _3, rc):
 	print("Connected with result code " + str(rc))
 
 	mqtt.subscribe("+/devices/+/up")
 
-def on_message(data): #client, userdata, msg):
+def on_message(_1, _2, msg):
 	try:
-		pass #data = json.loads(msg.payload.decode("utf8"))
-	except Exception as e:
+		data = json.loads(msg.payload.decode("utf8"))
+	except json.decoder.JSONDecodeError as e:
 		print(e)
 		return
 
