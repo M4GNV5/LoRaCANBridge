@@ -59,61 +59,29 @@ def parseMessage(payload):
 
 	return result
 
-knownGateways = {}
-def getGatewayPosition(gateway):
-	global knownGateways
-
-	if "latitude" in gateway and "longitude" in gateway:
-		return (gateway["latitude"], gateway["longitude"])
-
-	eui = gateway["gtw_id"]
-	if eui in knownGateways:
-		return knownGateways[eui]
-	else:
-		try:
-			response = requests.get("http://noc.thethingsnetwork.org:8085/api/v2/gateways/" + eui)
-			data = response.json()
-			gps = data["gps"]
-			location = data["location"]
-
-			if "latitude" in gps and "longitude" in gps:
-				pos = (gps["latitude"], gps["longitude"])
-			elif "latitude" in location and "longitude" in location:
-				pos = (location["latitude"], location["longitude"])
-			else:
-				pos = None
-		except Exception as e:
-			print(e)
-			pos = None
-
-		if pos is not None:
-			knownGateways[eui] = pos
-
-		return pos
-
 def on_connect(client, userdata, flags, rc):
 	print("Connected with result code " + str(rc))
 
 	mqtt.subscribe("+/devices/+/up")
 
-def on_message(client, userdata, msg):
+def on_message(data): #client, userdata, msg):
 	try:
-		data = json.loads(msg.payload.decode("utf8"))
+		pass #data = json.loads(msg.payload.decode("utf8"))
 	except Exception as e:
 		print(e)
 		return
 
-	payload = base64.decodestring(data["payload_raw"].encode("utf8"))
-	metadata = data["metadata"]
+	message = data["uplink_message"]
+	payload = base64.decodebytes(message["frm_payload"].encode("utf8"))
 	fields = parseMessage(payload)
 
 	gateway_lon = 0
 	gateway_lat = 0
 	gateway_count = 0
-	for gateway in metadata["gateways"]:
-		pos = getGatewayPosition(gateway)
-		if pos is not None:
-			lat, lon = pos
+	for gateway in message["rx_metadata"]:
+		if "location" in gateway:
+			lat = gateway["location"]["latitude"]
+			lon = gateway["location"]["longitude"]
 			gateway_lat += lat
 			gateway_lon += lon
 			gateway_count += 1
@@ -122,17 +90,18 @@ def on_message(client, userdata, msg):
 		fields["longitude"] = gateway_lon / gateway_count
 		fields["latitude"] = gateway_lat / gateway_count
 
-	fields["metadata"] = json.dumps(metadata)
+	fields["metadata"] = json.dumps(message)
+	ids = data["end_device_ids"]
 
 	body = [
 		{
 			"measurement": influxConfig["measurement"],
 			"tags": {
-				"app": data["app_id"],
-				"device": data["dev_id"],
-				"deviceEUI": data["hardware_serial"],
+				"app": ids["application_ids"]["application_id"],
+				"device": ids["device_id"],
+				"deviceEUI": ids["dev_eui"],
 			},
-			"time": metadata["time"],
+			"time": data["received_at"],
 			"fields": fields,
 		},
 	]
@@ -170,6 +139,8 @@ mqtt = MQTTClient()
 mqtt.on_connect = on_connect
 mqtt.on_message = on_message
 
+if "tls_ca" in ttnConfig:
+	mqtt.tls_set(ttnConfig["tls_ca"])
 mqtt.username_pw_set(ttnConfig["username"], ttnConfig["password"])
 mqtt.connect(ttnConfig["host"], ttnConfig["port"], 60)
 mqtt.loop_forever()
