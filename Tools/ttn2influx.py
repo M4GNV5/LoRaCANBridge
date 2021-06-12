@@ -66,9 +66,12 @@ def parseMessage(payload):
 def on_connect(_1, _2, _3, rc):
 	print("Connected with result code " + str(rc))
 
-	mqtt.subscribe("+/devices/+/up")
+	mqtt.subscribe("#")
 
 def on_message(_1, _2, msg):
+	if not msg.topic.endswith("/up"):
+		return
+
 	try:
 		data = json.loads(msg.payload.decode("utf8"))
 	except json.decoder.JSONDecodeError as e:
